@@ -1,1 +1,133 @@
-javascript:(async()=>{if(!window.pinyinPro){await new Promise((r,j)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.27.0/dist/index.min.js";s.onload=r;s.onerror=j;document.head.appendChild(s);});}const style=document.createElement("style");style.textContent="ruby{ruby-position:under;font-size:1.1em;}rt{font-size:.6em;color:#d33;}";document.head.appendChild(style);const hanzi=/[\u4e00-\u9fff]/;function annotate(n){if(!hanzi.test(n.nodeValue))return;const f=document.createDocumentFragment();for(const c of n.nodeValue){if(hanzi.test(c)){const py=window.pinyinPro.pinyin(c,{toneType:'mark'});const ruby=document.createElement('ruby');ruby.textContent=c;const rt=document.createElement('rt');rt.textContent=py;ruby.appendChild(rt);f.appendChild(ruby);}else{f.appendChild(document.createTextNode(c));}}n.parentNode.replaceChild(f,n);}const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null,false);const nodes=[];while(w.nextNode())nodes.push(w.currentNode);for(const n of nodes)annotate(n);const banner=document.createElement('div');banner.textContent='✅ Pinyin annotation done';banner.style.cssText='position:fixed;top:0;left:0;width:100%;background:lime;color:black;font-size:18px;text-align:center;padding:8px;z-index:999999';document.body.appendChild(banner);setTimeout(()=>banner.remove(),3000);})();
+(function () {
+  // -----------------------------------------------------------
+  // 1) Load pinyin-pro if it's not already available on window
+  // -----------------------------------------------------------
+  function loadPinyinPro(callbackSuccess, callbackError) {
+    var scriptElement = document.createElement("script");
+    scriptElement.src = "https://cdn.jsdelivr.net/npm/pinyin-pro@3.27.0/dist/index.min.js";
+    scriptElement.onload = callbackSuccess;
+    scriptElement.onerror = callbackError;
+    document.head.appendChild(scriptElement);
+  }
+
+  function ensurePinyinPro(callback) {
+    if (typeof window.pinyinPro !== "undefined") {
+      callback();
+    } else {
+      loadPinyinPro(callback, function () {
+        console.error("Failed to load pinyin-pro library.");
+      });
+    }
+  }
+
+  // -----------------------------------------------------------
+  // 2) Inject styles for ruby + rt annotations
+  // -----------------------------------------------------------
+  function injectRubyStyle() {
+    var styleElement = document.createElement("style");
+    styleElement.textContent = ""
+      + "ruby {"
+      + " ruby-position: under;"
+      + " font-size: 1.1em;"
+      + "}"
+      + "rt {"
+      + " font-size: 0.6em;"
+      + " color: #d33;"
+      + "}";
+    document.head.appendChild(styleElement);
+  }
+
+  // -----------------------------------------------------------
+  // 3) Annotate a single text node by wrapping Hanzi in ruby
+  // -----------------------------------------------------------
+  var hanziRegex = new RegExp("[\\u4e00-\\u9fff]");
+
+  function annotateTextNode(textNode) {
+    if (!hanziRegex.test(textNode.nodeValue)) {
+      return;
+    }
+
+    var fragment = document.createDocumentFragment();
+    var textContent = textNode.nodeValue;
+    var i;
+    for (i = 0; i < textContent.length; i++) {
+      var character = textContent.charAt(i);
+      if (hanziRegex.test(character)) {
+        var pinyin = window.pinyinPro.pinyin(character, { toneType: "mark" });
+
+        var rubyElement = document.createElement("ruby");
+        var rtElement = document.createElement("rt");
+
+        rubyElement.appendChild(document.createTextNode(character));
+        rtElement.appendChild(document.createTextNode(pinyin));
+        rubyElement.appendChild(rtElement);
+
+        fragment.appendChild(rubyElement);
+      } else {
+        fragment.appendChild(document.createTextNode(character));
+      }
+    }
+
+    textNode.parentNode.replaceChild(fragment, textNode);
+  }
+
+  // -----------------------------------------------------------
+  // 4) Walk through all text nodes in the body and annotate
+  // -----------------------------------------------------------
+  function annotateDocumentBody() {
+    var walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+
+    var nodes = [];
+    while (walker.nextNode()) {
+      nodes.push(walker.currentNode);
+    }
+
+    var j;
+    for (j = 0; j < nodes.length; j++) {
+      annotateTextNode(nodes[j]);
+    }
+  }
+
+  // -----------------------------------------------------------
+  // 5) Display a temporary banner message
+  // -----------------------------------------------------------
+  function showBannerMessage(messageText) {
+    var banner = document.createElement("div");
+    banner.appendChild(document.createTextNode(messageText));
+
+    banner.style.position = "fixed";
+    banner.style.top = "0";
+    banner.style.left = "0";
+    banner.style.width = "100%";
+    banner.style.background = "lime";
+    banner.style.color = "black";
+    banner.style.fontSize = "18px";
+    banner.style.textAlign = "center";
+    banner.style.padding = "8px";
+    banner.style.zIndex = "999999";
+
+    document.body.appendChild(banner);
+
+    window.setTimeout(function () {
+      if (banner.parentNode) {
+        banner.parentNode.removeChild(banner);
+      }
+    }, 3000);
+  }
+
+  // -----------------------------------------------------------
+  // 6) Main flow
+  // -----------------------------------------------------------
+  function main() {
+    injectRubyStyle();
+    annotateDocumentBody();
+    showBannerMessage("✅ Pinyin annotation done");
+  }
+
+  ensurePinyinPro(main);
+})();
